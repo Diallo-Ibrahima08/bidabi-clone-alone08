@@ -211,3 +211,6 @@ data/interim/
 data/images/
 data/train/
 data/val/
+
+data/raw/images/
+data/processed/
