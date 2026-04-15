@@ -57,7 +57,7 @@ set_seed(42)
 H = 256
 W = 256
 BATCH_SIZE = 32
-DATA_DIR = "./Flipkart/Sorted/"
+DATA_DIR = "./data/train/"
 NUM_EPOCHS = 20
 PATIENCE = 3
 

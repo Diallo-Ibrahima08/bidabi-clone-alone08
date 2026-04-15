@@ -5,17 +5,17 @@ import os
 from aiohttp import ClientSession, ClientTimeout
 
 API_URL = "https://world.openfoodfacts.org/cgi/search.pl"
-HEADERS = {"User-Agent": "MyAwesomeApp/1.0"}
+HEADERS = {"User-Agent": "bidabi-student-project/1.0 (contact@student.fr)"}
 
 OUTPUT_DIR = "data"
 
-CATEGORY = "sugar" #"bread", "milk", "champagnes", "butter" 
+CATEGORY = "milk" #"bread", "milk", "champagnes", "butter" 
 TARGET_COUNT = 180
 PAGE_SIZE = 100
 MAX_PAGES = 50
 
-MAX_CONCURRENT_REQUESTS = 10
-MAX_CONCURRENT_IMAGES = 10
+MAX_CONCURRENT_REQUESTS = 3
+MAX_CONCURRENT_IMAGES = 3
 
 
 # -------------------------
