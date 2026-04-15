@@ -4,12 +4,18 @@ import csv
 import os
 from aiohttp import ClientSession, ClientTimeout
 
-API_URL = "https://world.openfoodfacts.org/cgi/search.pl"
-HEADERS = {"User-Agent": "bidabi-student-project/1.0 (contact@student.fr)"}
+API_URL = "https://world.openfoodfacts.org/api/v2/search"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Accept": "application/json",
+    "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+    "Connection": "keep-alive"
+}
 
 OUTPUT_DIR = "data/raw"
 
-CATEGORY = "milk" #"bread", "milk", "champagnes", "butter" 
+CATEGORY = "bread" #"bread", "milk", "champagnes", "butter" 
 TARGET_COUNT = 180
 PAGE_SIZE = 100
 MAX_PAGES = 50
@@ -31,7 +37,7 @@ def get_best_image(product):
 
 
 def is_valid_product(product):
-    required = ["_id", "product_name", "categories_tags"]
+    required = ["code", "product_name"]
     if not all(product.get(f) for f in required):
         return False
     return bool(get_best_image(product))
@@ -39,7 +45,7 @@ def is_valid_product(product):
 
 def extract_product_info(product):
     return [
-        product.get("_id"),
+        product.get("code"),  # <-- changé
         product.get("product_name"),
         ", ".join(product.get("categories_tags", [])),
         product.get("ingredients_text", ""),
@@ -52,20 +58,22 @@ def extract_product_info(product):
 # -------------------------
 async def fetch_page(session, category, page, page_size, sem):
     params = {
-        "action": "process",
-        "tagtype_0": "categories",
-        "tag_contains_0": "contains",
-        "tag_0": category,
+        "categories_tags_en": category,
         "page": page,
         "page_size": page_size,
-        "json": 1
+        "fields": "code,product_name,categories_tags,ingredients_text,image_url"
     }
 
     async with sem:
         try:
             async with session.get(API_URL, params=params) as resp:
+                if resp.status != 200:
+                    print(f"⚠ Erreur API page {page} | status={resp.status}")
+                    return []
+
                 data = await resp.json()
                 return data.get("products", [])
+
         except Exception as e:
             print(f"⚠ Erreur API page {page} :", e)
             return []
@@ -74,7 +82,9 @@ async def fetch_page(session, category, page, page_size, sem):
 # -------------------------
 # Async image download
 # -------------------------
-async def download_image(session, url, image_id, sem, folder=f"data/raw/images/{category}"):
+async def download_image(session, url, image_id, sem, category, folder=None):
+    await asyncio.sleep(0.5)
+    if folder is None: folder = f"data/raw/images/{category}"
     if not url:
         return
 
@@ -102,9 +112,10 @@ async def download_image(session, url, image_id, sem, folder=f"data/raw/images/{
 async def scrape(category, target_count, page_size, max_pages):
     timeout = ClientTimeout(total=60)
     sem_api = asyncio.Semaphore(MAX_CONCURRENT_REQUESTS)
-    sem_img = asyncio.Semaphore(MAX_CONCURRENT_IMAGES)
+    sem_img = asyncio.Semaphore(5)
 
     async with ClientSession(headers=HEADERS, timeout=timeout) as session:
+        await asyncio.sleep(2)
         valid_products = []
         image_tasks = []
         page = 1
@@ -126,7 +137,7 @@ async def scrape(category, target_count, page_size, max_pages):
                     image_id = info[0]
 
                     task = asyncio.create_task(
-                        download_image(session, image_url, image_id, sem_img)
+                        download_image(session, image_url, image_id, sem_img, CATEGORY)
                     )
                     image_tasks.append(task)
 
@@ -154,10 +165,15 @@ def save_to_csv(filename, rows):
 # -------------------------
 def main():
     products = asyncio.run(scrape(CATEGORY, TARGET_COUNT, PAGE_SIZE, MAX_PAGES))
-    output_file = f"{OUTPUT_DIR}/metadata_{CATEGORY}_{TARGET_COUNT}.csv"
+    output_file = f"data/raw/metadata_{CATEGORY}_{TARGET_COUNT}.csv"
     save_to_csv(output_file, products)
     print(f"✔ Fichier {output_file} créé. Produits valides collectés : {len(products)}")
 
 
 if __name__ == "__main__":
     main()
+
+
+
+
+

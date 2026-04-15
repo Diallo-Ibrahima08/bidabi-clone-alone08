@@ -214,3 +214,12 @@ data/val/
 
 data/raw/images/
 data/processed/
+
+!data/raw.dvc
+data/localstore/
+
+!data/raw.dvc
+data/localstore/
+
+!data/raw.dvc
+data/localstore/
